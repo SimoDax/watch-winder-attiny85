@@ -2,7 +2,7 @@
  * uln2003.c
  *
  * Created: 16/12/2016 13:25:52
- * Author : Simone
+ * Author : Simone Dassi
  */ 
 
 #include <avr/io.h>
@@ -10,13 +10,12 @@
 #include <avr/delay.h>
 #include <avr/interrupt.h>
 
-#define DELAY 3
-#define	WAIT_DELAY 250
+#define DELAY 3		//lower value = higher motor speed
 #define F_CPU 1000000
 
-uint8_t lookup[] = {0b10000, 0b11000, 0b01000, 0b01100, 0b00100, 0b00110, 0b00010, 0b10010}, i;
+uint8_t lookup[] = {0b10000, 0b11000, 0b01000, 0b01100, 0b00100, 0b00110, 0b00010, 0b10010}, i; //pin states packed in array because making 8 nested if-else is just awful.
 uint16_t t;
-volatile uint16_t cont=0;
+volatile uint16_t cont=0; //volatile: just making sure the compiler doesn't optimize this away
 
 ISR(TIMER0_OVF_vect){
 	cont++;
@@ -24,9 +23,9 @@ ISR(TIMER0_OVF_vect){
 
 void spin()
 {
-	for(t = 0; t < 25000; t++) // 10 min / (delay * 8) = numero cicli full step per arrivare a 10 min
-		for(i = 0; i < 8; i++){
-			PORTB = lookup[i];
+	for(t = 0; t < 25000; t++) //25000 = 10 min / (DELAY * 8) = number of cycles
+		for(i = 0; i < 8; i++){		//single full-step cycle
+			PORTB = lookup[i];	//here's where the magic happens :)
 			_delay_ms(DELAY);
 		}
 	PORTB = 0;
@@ -34,36 +33,32 @@ void spin()
 
 int main(void)
 {
-    /* Replace with your application code */	
-	
-	ACSR = ADMUX = ADCSRA = 0;
+
+	ACSR = ADMUX = ADCSRA = 0;		// turn off things we don't need
 	ACSR = 0b10000000;
 	set_sleep_mode(SLEEP_MODE_IDLE);
-	
+
 	DDRB = 0b11110;
-	
+
 	TIMSK |= 1<<TOIE0;	//overflow interrupt
 	sei();
 	
     while (1)
     {
-		TCCR0B = 0;
-		PRR = 0b00001111;
-		spin();
-		PRR = PRR = 0b00001011;
+		TCCR0B = 0;		//timer0 stopped
+		PRR = 0b00001111;	//disable timer0
+		spin();			//you spin me right round baby right round
+		PRR = 0b00001011;	//enable timer0
 		TCCR0B |= 1<<CS02 | 1<<CS00; //1024 prescaler
 		
 		cont = 0;
 		
 		do{
-			sleep_mode();	
-		}while(cont < 11444);	//not yet, go back to sleep
-		
-		/*for(t = 0; t < 12000; t++) // 50 min / (4 * 0.250) = numero di delay da 1/4 di secondo per 50 min
-			_delay_ms(WAIT_DELAY);*/
+			sleep_mode();	//thy time has not come yet, go back to sleep
+		}while(cont < 11444);	//11444: number of timer0 overflows @1024 prescaling to wait 50 minutes
 			
     }
 	
-	return 0;
+	return 0;	//never actually hit
 }
 
