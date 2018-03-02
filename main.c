@@ -5,13 +5,14 @@
  * Author : Simone Dassi
  */ 
 
+#define F_CPU 1000000
+
 #include <avr/io.h>
 #include <avr/sleep.h>
 #include <avr/delay.h>
 #include <avr/interrupt.h>
 
 #define DELAY 3		//lower value = higher motor speed
-#define F_CPU 1000000
 
 uint8_t lookup[] = {0b10000, 0b11000, 0b01000, 0b01100, 0b00100, 0b00110, 0b00010, 0b10010}, i; //pin states packed in array because making 8 nested if-else is just awful.
 uint16_t t;
